@@ -1,38 +1,49 @@
 package main
 
 import (
-	"flag"
-
-	"net/http"
-	"time"
-
+	"context"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type App struct {
 	DB   string
 	PORT string
 	log  *log.Logger
+	Con  *mongo.Database
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+	  log.Fatal("Error loading .env file")
+	}
 
 	logger := log.New(os.Stdout, "", log.Ltime|log.Ldate)
-	app := App{log: logger}
-
-	flag.StringVar(&app.DB, "d", "local", "database string")
-	flag.StringVar(&app.PORT, "port", ":5000", "port")
-	flag.Parse()
-
-	srv := &http.Server{
-		Addr:         app.PORT,
-		Handler:      app.Routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+	app := App{
+		log: logger,
+		PORT: os.Getenv("PORT"),
+		DB: os.Getenv("DB_URL"),
 	}
-	app.log.Printf("starting server on %s", app.PORT)
-	err := srv.ListenAndServe()
-	logger.Fatal(err)
+
+
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(app.DB))
+	if err != nil {
+		panic(err)
+	}
+	app.Con=client.Database("ecom")
+	defer func() {
+		if err := client.Disconnect(context.TODO()); err != nil {
+			panic(err)
+		}
+	}()
+
+	srv := app.Routes()
+	srv.Listen(app.PORT)
+	
+	
 }

@@ -1,16 +1,29 @@
 package main
 
 import (
-	"github.com/julienschmidt/httprouter"
+	"github.com/gofiber/fiber/v2"
+    jwtware "github.com/gofiber/contrib/jwt"
 )
 
-func (app *App)Routes() *httprouter.Router{
+func (app *App)Routes() *fiber.App{
+
+	r:=fiber.New()
+
 	
-	r:=httprouter.New()
+	r.Get("/login",app.Login)
 
 
-	r.GET("/v1/register",app.CreateSeller)
+	//protected routes
+	r.Use(jwtware.New(jwtware.Config{
+        SigningKey: jwtware.SigningKey{Key: []byte("rejathchandran")},
+    }))
+   
+	r.Get("/details",GetToken,app.Details)
 
+
+// TODO: category 
+// TODO: order 
+// TODO: cart 
 
 
 	return r
